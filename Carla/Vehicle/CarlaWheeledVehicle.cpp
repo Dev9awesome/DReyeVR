@@ -380,7 +380,7 @@ void ACarlaWheeledVehicle::FlushVehicleControl()
 void ACarlaWheeledVehicle::SetThrottleInput(const float Value)
 {
   FVehicleControl Control = InputControl.Control;
-  Control.Throttle = Value;
+  Control.Brake = Value;
   ApplyVehicleControl(Control, EVehicleInputPriority::User);
 }
 
@@ -394,7 +394,7 @@ void ACarlaWheeledVehicle::SetSteeringInput(const float Value)
 void ACarlaWheeledVehicle::SetBrakeInput(const float Value)
 {
   FVehicleControl Control = InputControl.Control;
-  Control.Brake = Value;
+  Control.Throttle = Value;
   ApplyVehicleControl(Control, EVehicleInputPriority::User);
 }
 
