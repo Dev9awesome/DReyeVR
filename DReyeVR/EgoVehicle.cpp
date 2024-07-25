@@ -18,6 +18,7 @@
 AEgoVehicle::AEgoVehicle(const FObjectInitializer &ObjectInitializer) : Super(ObjectInitializer)
 {
     LOG("Constructing Ego Vehicle: %s", *FString(this->GetName()));
+    LOG("Silly Silly testing moment");
 
     ReadConfigVariables();
 

@@ -17,60 +17,18 @@
 #include "HeadMountedDisplayFunctionLibrary.h" // IsHeadMountedDisplayAvailable
 #include "Kismet/GameplayStatics.h"            // GetPlayerController
 #include "UObject/UObjectIterator.h"           // TObjectInterator
-#include "DReyeVRGameState.h"                  // Include Client-side game state for multiplayer funcitonality
 
-ADReyeVRGameMode::ADReyeVRGameMode(FObjectInitializer const &FO) : Super(FO)
+ADReyeVRGameMode::ADReyeVRGameState(FObjectInitializer const &FO) : Super(FO)
 {
-
-
-    // initialize stuff here
-    PrimaryActorTick.bCanEverTick = false;
-    PrimaryActorTick.bStartWithTickEnabled = false;
-
+   
     // initialize default classes
     this->HUDClass = ADReyeVRHUD::StaticClass();
-    // find object UClass rather than UBlueprint
-    // https://forums.unrealengine.com/t/cdo-constructor-failed-to-find-thirdperson-c-template-mannequin-animbp/99003
-    static ConstructorHelpers::FObjectFinder<UClass> WeatherBP(
-        TEXT("/Game/Carla/Blueprints/Weather/BP_Weather.BP_Weather_C"));
-    this->WeatherClass = WeatherBP.Object;
-
-    // initialize actor factories
-    // https://forums.unrealengine.com/t/what-is-the-right-syntax-of-fclassfinder-and-how-could-i-generaly-use-it-to-find-a-specific-blueprint/363884
-    static ConstructorHelpers::FClassFinder<ACarlaActorFactory> VehicleFactoryBP(
-        TEXT("Blueprint'/Game/Carla/Blueprints/Vehicles/VehicleFactory'"));
-    static ConstructorHelpers::FClassFinder<ACarlaActorFactory> WalkerFactoryBP(
-        TEXT("Blueprint'/Game/Carla/Blueprints/Walkers/WalkerFactory'"));
-    static ConstructorHelpers::FClassFinder<ACarlaActorFactory> PropFactoryBP(
-        TEXT("Blueprint'/Game/Carla/Blueprints/Props/PropFactory'"));
-
-    GameStateClass = ADReyeVRGameState::StaticClass();
-
-
-    this->ActorFactories = TSet<TSubclassOf<ACarlaActorFactory>>{
-        VehicleFactoryBP.Class,
-        ASensorFactory::StaticClass(),
-        WalkerFactoryBP.Class,
-        PropFactoryBP.Class,
-        ATriggerFactory::StaticClass(),
-        AAIControllerFactory::StaticClass(),
-        AStaticMeshFactory::StaticClass(),
-        ADReyeVRFactory::StaticClass(), // this is what registers the DReyeVR actors
-    };
-
-    
 
     // read config variables
-    EgoVolumePercent = GeneralParams.Get<float>("Sound", "EgoVolumePercent");
-    NonEgoVolumePercent = GeneralParams.Get<float>("Sound", "NonEgoVolumePercent");
-    AmbientVolumePercent = GeneralParams.Get<float>("Sound", "AmbientVolumePercent");
     bDoSpawnEgoVehicleTransform = GeneralParams.Get<bool>("Game", "DoSpawnEgoVehicleTransform");
     SpawnEgoVehicleTransform = GeneralParams.Get<FTransform>("Game", "SpawnEgoVehicleTransform");
 
-    // Recorder/replayer
-    bUseCarlaSpectator = GeneralParams.Get<bool>("Replayer", "UseCarlaSpectator");
-    bool bEnableReplayInterpolation = GeneralParams.Get<bool>("Replayer", "ReplayInterpolation");
-    bReplaySync = !bEnableReplayInterpolation; // synchronous => no interpolation!
+
 }
 
 void ADReyeVRGameMode::BeginPlay()
