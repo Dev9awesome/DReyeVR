@@ -105,6 +105,10 @@ void ADReyeVRGameMode::BeginPlay()
     ensure(GetSpectator() != nullptr);
 }
 
+virtual void OnPostLogin(APlayerController* NewPlayer){
+    PlayerControllerList.Add(NewPlayer);
+}
+
 void ADReyeVRGameMode::SetupDReyeVRPawn()
 {
     if (DReyeVR_Pawn.IsValid())
