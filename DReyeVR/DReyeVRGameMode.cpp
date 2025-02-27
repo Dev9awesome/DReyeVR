@@ -17,7 +17,7 @@
 #include "HeadMountedDisplayFunctionLibrary.h" // IsHeadMountedDisplayAvailable
 #include "Kismet/GameplayStatics.h"            // GetPlayerController
 #include "UObject/UObjectIterator.h"           // TObjectInterator
-#include "DReyeVRGameState.h"                  // Include Client-side game state for multiplayer funcitonality
+//#include "DReyeVRGameState.h"                  // Include Client-side game state for multiplayer funcitonality
 
 ADReyeVRGameMode::ADReyeVRGameMode(FObjectInitializer const &FO) : Super(FO)
 {
@@ -44,7 +44,7 @@ ADReyeVRGameMode::ADReyeVRGameMode(FObjectInitializer const &FO) : Super(FO)
     static ConstructorHelpers::FClassFinder<ACarlaActorFactory> PropFactoryBP(
         TEXT("Blueprint'/Game/Carla/Blueprints/Props/PropFactory'"));
 
-    GameStateClass = ADReyeVRGameState::StaticClass();
+    //GameStateClass = ADReyeVRGameState::StaticClass();
 
 
     this->ActorFactories = TSet<TSubclassOf<ACarlaActorFactory>>{
@@ -105,36 +105,63 @@ void ADReyeVRGameMode::BeginPlay()
     ensure(GetSpectator() != nullptr);
 }
 
-virtual void OnPostLogin(APlayerController* NewPlayer){
+void ADReyeVRGameMode::PostLogin(APlayerController* NewPlayer){
+    Super::PostLogin(NewPlayer);
     PlayerControllerList.Add(NewPlayer);
 }
 
-void ADReyeVRGameMode::SetupDReyeVRPawn()
-{
-    if (DReyeVR_Pawn.IsValid())
-    {
-        LOG("Not spawning new DReyeVR pawn");
-        return;
-    }
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.Owner = this;
-    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-    DReyeVR_Pawn = GetWorld()->SpawnActor<ADReyeVRPawn>(FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
-    /// NOTE: the pawn is automatically possessed by player0
-    // as the constructor has the AutoPossessPlayer != disabled
-    // if you want to manually possess then you can do Player->Possess(DReyeVR_Pawn);
-    if (!DReyeVR_Pawn.IsValid())
-    {
-        LOG_ERROR("Unable to spawn DReyeVR pawn!")
-    }
-    else
-    {
-        DReyeVR_Pawn.Get()->BeginPlayer(GetPlayer());
-        LOG("Successfully spawned DReyeVR pawn");
-    }
+TArray<class APlayerController*> ADReyeVRGameMode::GetPlayerList(){
+    return PlayerControllerList;
 }
 
-void ADReyeVRGameMode::SetEgoVehicle(AEgoVehicle *Ego)
+void ADReyeVRGameMode::SetupDReyeVRPawn() //TODO: Put a pawn list here
+{
+    LOG("Setting up at least one DReyeVR Pawn");
+    TWeakObjectPtr<class ADReyeVRPawn> Temp_DReyeVR_Pawn;
+
+    if (DReyeVR_Pawn.IsValid())
+    {
+        //LOG("Not spawning new DReyeVR pawn");
+        //return;
+        LOG("Found existing DReyeVR pawn");
+    }
+    if(PawnList.Num() >= PlayerControllerList.Num()){
+        LOG("Enough Pawns have spawned, not spawning anymore")
+        return;
+    }
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Owner = this;
+
+    FVector SpawnLocation = FVector(0.0,0.0,0.0);
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    DReyeVR_Pawn = GetWorld()->SpawnActor<ADReyeVRPawn>(SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+ 
+    for(int i = 1; i < PlayerControllerList.Num(); i++){
+        float currIndex = static_cast<float>(i);
+        //FVector SpawnLocation = {0.0 + (currIndex*10.0),0.0,0.0};
+        SpawnLocation = FVector(0.0 + (currIndex*10.0),0.0,0.0);
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        
+        Temp_DReyeVR_Pawn = GetWorld()->SpawnActor<ADReyeVRPawn>(SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+
+        if (!DReyeVR_Pawn.IsValid()){
+                    //LOG_ERROR("Unable to spawn DReyeVR pawn!");
+                    LOG("DReyeVR Pawn variable is not valid");
+        }
+        else{
+                //TODO: This is recursive and shouldn't be
+                PawnList.Add((SafePtrGet<ADReyeVRPawn>("Pawn", Temp_DReyeVR_Pawn, [&](void) { SetupDReyeVRPawn(); })));
+                PawnList[i]->BeginPlayer(PlayerControllerList[i]);
+                LOG("Successfully spawned DReyeVR pawn");
+        }
+        
+
+    }
+    
+}
+
+void ADReyeVRGameMode::SetEgoVehicle(AEgoVehicle *Ego) //TODO: Should I make an EgoVehicle list
 {
     EgoVehiclePtr.Reset();
     EgoVehiclePtr = Ego;
@@ -151,28 +178,35 @@ bool ADReyeVRGameMode::SetupEgoVehicle()
 {
     if (EgoVehiclePtr.IsValid())
     {
-        LOG("Not spawning new EgoVehicle");
-        return true;
+        LOG("Found EgoVehicle");
+        //return true;
     }
 
     TArray<AActor *> FoundActors;
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEgoVehicle::StaticClass(), FoundActors);
-    if (FoundActors.Num() > 0)
+    if (FoundActors.Num() >= PlayerControllerList.Num())
     {
-        for (AActor *Vehicle : FoundActors)
+        /*for (AActor *Vehicle : FoundActors)
         {
             LOG("Found EgoVehicle in world: %s", *(Vehicle->GetName()));
             EgoVehiclePtr = CastChecked<AEgoVehicle>(Vehicle);
             /// TODO: handle multiple ego-vehcles? (we should only ever have one!)
             break;
+        }*/
+        for (int i = 0; i < FoundActors.Num(); i++){
+             LOG("Found EgoVehicle in world: %s", *(FoundActors[i]->GetName()));
+             EgoList[i] = CastChecked<AEgoVehicle>(FoundActors[i]);
         }
     }
     else
     {
         LOG("Did not find EgoVehicle in map... spawning...");
         // use the provided transform if requested, else generate a spawn point
-        FTransform SpawnPt = bDoSpawnEgoVehicleTransform ? SpawnEgoVehicleTransform : GetSpawnPoint();
-        SpawnEgoVehicle(SpawnPt); // constructs and assigns EgoVehiclePtr
+        for(APlayerController* playerContr : PlayerControllerList){
+            FTransform SpawnPt = bDoSpawnEgoVehicleTransform ? SpawnEgoVehicleTransform : GetSpawnPoint();
+            SpawnEgoVehicle(SpawnPt); // constructs and assigns EgoVehiclePtr
+        }
+        
     }
 
     // finalize the EgoVehicle by installing the DReyeVR_Pawn to control it
@@ -268,6 +302,7 @@ ADReyeVRPawn *ADReyeVRGameMode::GetPawn()
 {
     return SafePtrGet<ADReyeVRPawn>("Pawn", DReyeVR_Pawn, [&](void) { SetupDReyeVRPawn(); });
 }
+
 
 void ADReyeVRGameMode::BeginDestroy()
 {
@@ -616,8 +651,13 @@ void ADReyeVRGameMode::SpawnEgoVehicle(const FTransform &SpawnPt)
             DReyeVRDescr.Variations.Add(A.Id, std::move(A));
         }
     }
-    // calls Episode::SpawnActor => SpawnActorWithInfo => ActorDispatcher->SpawnActor => SpawnFunctions[UId]
-    EgoVehiclePtr = static_cast<AEgoVehicle *>(Episode->SpawnActor(SpawnPt, DReyeVRDescr));
+    // calls Episode::SpawnActor => SpawnActorWithInfo => ActorDispatcher->SpawnActor => SpawnFunctions[UId] 
+    
+     //Ensures that EgoVehiclePtr is real
+
+    EgoVehiclePtr = static_cast<AEgoVehicle*>(Episode->SpawnActor(SpawnPt, DReyeVRDescr));
+    AEgoVehicle* stdEgoPtr = SafePtrGet<AEgoVehicle>("EgoVehiclePtr0", EgoVehiclePtr, [&](void) { SetupEgoVehicle(); });
+    EgoList.Append(stdEgoPtr);
 }
 
 FTransform ADReyeVRGameMode::GetSpawnPoint(int SpawnPointIndex) const

@@ -1011,12 +1011,18 @@ void AEgoVehicle::TickSteeringWheel(const float DeltaTime)
 
 void AEgoVehicle::SetGame(ADReyeVRGameMode *Game)
 {
-    DReyeVRGame = Game;
-    check(DReyeVRGame != nullptr);
-    check(DReyeVRGame->GetEgoVehicle() == this);
+    if(GetGame()){
+        DReyeVRGame = Game;
+        check(DReyeVRGame != nullptr);
+        //check(DReyeVRGame->GetEgoVehicle() == this);
 
-    DReyeVRGame->GetPawn()->BeginEgoVehicle(this, World);
-    LOG("Successfully assigned GameMode & controller pawn");
+        DReyeVRGame->GetPawn()->BeginEgoVehicle(this, World);
+        LOG("Successfully assigned GameMode & controller pawn");
+    }
+    else{
+        LOG("Ego Vehicle could not set Game Mode");
+    }
+   
 }
 
 ADReyeVRGameMode *AEgoVehicle::GetGame()

@@ -29,6 +29,9 @@ class ADReyeVRGameMode : public ACarlaGameModeBase
     AEgoVehicle *GetEgoVehicle();
     APlayerController *GetPlayer();
     ADReyeVRPawn *GetPawn();
+    TArray<class APlayerController*> GetPlayerList();
+    TArray<class ADReyeVRPawn*> GetPawnList();
+    TArray<class AEgoVehicle*> GetEgoList();
 
     virtual void PostLogin(APlayerController* NewPlayer) override;
     void SetEgoVehicle(AEgoVehicle *Ego);
@@ -76,7 +79,9 @@ class ADReyeVRGameMode : public ACarlaGameModeBase
     TWeakObjectPtr<class APawn> SpectatorPtr;
     TWeakObjectPtr<class AEgoVehicle> EgoVehiclePtr;
 
-    TArray<class APlayerController*> PlayerControllerList;
+    TArray<APlayerController*> PlayerControllerList;
+    TArray<ADReyeVRPawn*> PawnList;
+    TArray<AEgoVehicle*> EgoList;
 
     // for toggling bw spectator mode
     bool bIsSpectating = true;
